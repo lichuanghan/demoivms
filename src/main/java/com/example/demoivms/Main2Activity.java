@@ -23,6 +23,9 @@ import com.hikvision.vmsnetsdk.ServInfo;
 import com.hikvision.vmsnetsdk.VMSNetSDK;
 import com.hikvision.vmsnetsdk.netLayer.msp.deviceInfo.DeviceInfo;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Main2Activity extends AppCompatActivity implements View.OnClickListener, LiveCallBack {
 
     private EditText serverAddr;
@@ -37,6 +40,8 @@ public class Main2Activity extends AppCompatActivity implements View.OnClickList
     private static final int MSG_FAILURE = 0;
     private static final int MSG_SUCCESS = 1;
     private static final int MSG_PROGRESS = 2;
+    private static final int MSG_CAMERA_SUCCESS = 11;
+    private static final int MSG_CAMERA_FILURE = 12;
     private static final String TAG = "ligt";
     private Button listBtn;
     private LiveControl mLiveControl;
@@ -72,6 +77,7 @@ public class Main2Activity extends AppCompatActivity implements View.OnClickList
      */
     private String mPassword;
     private CameraInfo cameraInfo;
+    private List<CameraInfo> cameraInfoList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -143,7 +149,16 @@ public class Main2Activity extends AppCompatActivity implements View.OnClickList
      * 获取摄像头列表
      */
     private void getList() {
-
+        new Thread(){
+            @Override
+            public void run() {
+                cameraInfoList = new ArrayList<CameraInfo>();
+                boolean ret = Main2Activity.this.mVmsNetSDK.getCameraListFromCtrlUnit("http://10.50.2.155",servInfo.getSessionID(),"174",100,1, cameraInfoList);
+                if(ret){
+                    handler.sendEmptyMessage(MSG_CAMERA_SUCCESS);
+                }
+            }
+        }.start();
     }
 
     /**
@@ -211,15 +226,24 @@ public class Main2Activity extends AppCompatActivity implements View.OnClickList
                 case MSG_SUCCESS:
                     Log.e(TAG,TempData.getInstance().getLoginData().getSessionID());
                     Toast.makeText(Main2Activity.this, "登陆成功", Toast.LENGTH_LONG).show();
-                    String serAddr = "http://10/50.2.155";
-                    String sessionid = servInfo.getSessionID();
-                    getCameraDetailInfo(serAddr, sessionid);
+//                    String serAddr = "http://10/50.2.155";
+//                    String sessionid = servInfo.getSessionID();
+//                    getCameraDetailInfo(serAddr, sessionid);
                     break;
                 case MSG_FAILURE:
                     Toast.makeText(Main2Activity.this, "登陆失败", Toast.LENGTH_LONG).show();
                     break;
                 case MSG_PROGRESS:
                     Toast.makeText(Main2Activity.this, "登陆中...", Toast.LENGTH_LONG).show();
+                    break;
+                case MSG_CAMERA_SUCCESS:
+                    Toast.makeText(Main2Activity.this, "获取摄像头列表成功", Toast.LENGTH_LONG).show();
+                    for(CameraInfo c:cameraInfoList){
+                        Log.e(TAG,"cameraInfo:"+c.getName());
+                    }
+                    break;
+                case MSG_CAMERA_FILURE:
+                    Toast.makeText(Main2Activity.this, "获取摄像头列表失败", Toast.LENGTH_LONG).show();
                     break;
             }
         }
